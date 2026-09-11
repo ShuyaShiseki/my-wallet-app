@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+    Alert,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -73,8 +74,20 @@ export default function HomeScreen() {
 
   const handleExpenseSubmit = () => {
     const amount = Number(expenseAmount) || 0;
-    if (!addExpense(selectedAccount, amount, expenseCategory)) {
-      setStatusMessage('金額とカテゴリを入力してください');
+    const result = addExpense(selectedAccount, amount, expenseCategory);
+    if (!result.ok) {
+      if (result.reason === 'insufficient-funds') {
+        Alert.alert(
+          '残高不足',
+          `${selectedAccount === 'bank' ? '銀行' : '財布'}の残高を超える支出は登録できません。`,
+          [{ text: '確認' }],
+        );
+      }
+      setStatusMessage(
+        result.reason === 'insufficient-funds'
+          ? '残高が不足しているため登録できません'
+          : '金額とカテゴリを入力してください',
+      );
       setStatusTone('error');
       return;
     }
@@ -98,8 +111,18 @@ export default function HomeScreen() {
 
   const handleWithdrawalSubmit = () => {
     const amount = Number(withdrawalAmount) || 0;
-    if (!addWithdrawal(amount)) {
-      setStatusMessage('引き出し額を入力してください');
+    const result = addWithdrawal(amount);
+    if (!result.ok) {
+      if (result.reason === 'insufficient-funds') {
+        Alert.alert('残高不足', '銀行残高を超える引き出しは登録できません。', [
+          { text: '確認' },
+        ]);
+      }
+      setStatusMessage(
+        result.reason === 'insufficient-funds'
+          ? '銀行残高が不足しているため引き出せません'
+          : '引き出し額を入力してください',
+      );
       setStatusTone('error');
       return;
     }
@@ -181,6 +204,37 @@ export default function HomeScreen() {
 
           <ThemedView type="backgroundElement" style={styles.formCard}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
+              初期残高の設定
+            </ThemedText>
+            <View style={styles.inlineInputs}>
+              <View style={styles.inputGroup}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  銀行残高
+                </ThemedText>
+                <TextInput
+                  value={initialBank}
+                  onChangeText={setInitialBank}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  財布残高
+                </ThemedText>
+                <TextInput
+                  value={initialWallet}
+                  onChangeText={setInitialWallet}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  style={styles.input}
+                />
+              </View>
+            </View>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+              onPress={handleInitialSave}>
               支出登録
             </ThemedText>
             <View style={styles.accountRow}>
@@ -188,9 +242,10 @@ export default function HomeScreen() {
                 <Pressable
                   key={account}
                   onPress={() => setSelectedAccount(account)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.accountButton,
                     selectedAccount === account && styles.accountButtonSelected,
+                    pressed && styles.buttonPressed,
                   ]}>
                   <ThemedText style={styles.accountButtonText}>
                     {account === 'bank' ? '銀行' : '財布'}
@@ -223,7 +278,9 @@ export default function HomeScreen() {
                 />
               </View>
             </View>
-            <Pressable style={styles.primaryButton} onPress={handleExpenseSubmit}>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+              onPress={handleExpenseSubmit}>
               <ThemedText type="default" style={styles.buttonText}>
                 支出を登録
               </ThemedText>
@@ -248,7 +305,9 @@ export default function HomeScreen() {
                 />
               </View>
             </View>
-            <Pressable style={styles.secondaryButton} onPress={handleWithdrawalSubmit}>
+            <Pressable
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+              onPress={handleWithdrawalSubmit}>
               <ThemedText type="default" style={styles.buttonText}>
                 銀行から現金へ移動
               </ThemedText>
@@ -370,17 +429,33 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '700',
   },
+  buttonPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.96 }],
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   primaryButton: {
     backgroundColor: '#111827',
     paddingVertical: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   secondaryButton: {
     backgroundColor: '#f59e0b',
     paddingVertical: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonText: {
     color: '#ffffff',
