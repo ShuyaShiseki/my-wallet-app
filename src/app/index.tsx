@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     Pressable,
     ScrollView,
@@ -22,20 +22,14 @@ const formatMoney = (value: number) =>
   }).format(value);
 
 export default function HomeScreen() {
-  const { initialBalances, balances, history, setInitialBalances, addExpense, addWithdrawal } = useWallet();
-  const [initialBank, setInitialBank] = useState(String(initialBalances.bank));
-  const [initialWallet, setInitialWallet] = useState(String(initialBalances.wallet));
+  const { balances, history, addExpense, addWithdrawal, addDeposit } = useWallet();
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseCategory, setExpenseCategory] = useState('');
   const [selectedAccount, setSelectedAccount] = useState<AccountType>('bank');
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [statusTone, setStatusTone] = useState<'success' | 'error'>('success');
-
-  useEffect(() => {
-    setInitialBank(String(initialBalances.bank));
-    setInitialWallet(String(initialBalances.wallet));
-  }, [initialBalances]);
 
   const balanceSummary = useMemo(
     () => [
@@ -77,14 +71,6 @@ export default function HomeScreen() {
     [cashRatio, monthlyExpenseTotal, totalAssets],
   );
 
-  const handleInitialSave = () => {
-    const bankValue = Number(initialBank) || 0;
-    const walletValue = Number(initialWallet) || 0;
-    setInitialBalances(bankValue, walletValue);
-    setStatusMessage('初期残高を保存しました');
-    setStatusTone('success');
-  };
-
   const handleExpenseSubmit = () => {
     const amount = Number(expenseAmount) || 0;
     if (!addExpense(selectedAccount, amount, expenseCategory)) {
@@ -95,6 +81,18 @@ export default function HomeScreen() {
     setExpenseAmount('');
     setExpenseCategory('');
     setStatusMessage('支出を登録しました');
+    setStatusTone('success');
+  };
+
+  const handleDepositSubmit = () => {
+    const amount = Number(depositAmount) || 0;
+    if (!addDeposit(amount)) {
+      setStatusMessage('預け入れ額が財布残高を超えています');
+      setStatusTone('error');
+      return;
+    }
+    setDepositAmount('');
+    setStatusMessage('財布から銀行へ預け入れました');
     setStatusTone('success');
   };
 
@@ -148,6 +146,27 @@ export default function HomeScreen() {
             </View>
           </ThemedView>
 
+          <ThemedView type="backgroundElement" style={styles.formCard}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              預け入れ
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              財布から銀行へ資金を移動します。
+            </ThemedText>
+            <TextInput
+              value={depositAmount}
+              onChangeText={setDepositAmount}
+              keyboardType="number-pad"
+              placeholder="例: 10000"
+              style={styles.input}
+            />
+            <Pressable style={styles.secondaryButton} onPress={handleDepositSubmit}>
+              <ThemedText type="default" style={styles.buttonText}>
+                財布から銀行へ預け入れ
+              </ThemedText>
+            </Pressable>
+          </ThemedView>
+
           {statusMessage ? (
             <View
               style={[
@@ -159,43 +178,6 @@ export default function HomeScreen() {
               </ThemedText>
             </View>
           ) : null}
-
-          <ThemedView type="backgroundElement" style={styles.formCard}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              初期残高の設定
-            </ThemedText>
-            <View style={styles.inlineInputs}>
-              <View style={styles.inputGroup}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  銀行残高
-                </ThemedText>
-                <TextInput
-                  value={initialBank}
-                  onChangeText={setInitialBank}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  style={styles.input}
-                />
-              </View>
-              <View style={styles.inputGroup}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  財布残高
-                </ThemedText>
-                <TextInput
-                  value={initialWallet}
-                  onChangeText={setInitialWallet}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  style={styles.input}
-                />
-              </View>
-            </View>
-            <Pressable style={styles.primaryButton} onPress={handleInitialSave}>
-              <ThemedText type="default" style={styles.buttonText}>
-                初期残高を設定
-              </ThemedText>
-            </Pressable>
-          </ThemedView>
 
           <ThemedView type="backgroundElement" style={styles.formCard}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
