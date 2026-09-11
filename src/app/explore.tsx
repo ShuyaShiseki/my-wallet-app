@@ -113,8 +113,8 @@ export default function HistoryScreen() {
                       ]}
                       onPress={() =>
                         Alert.alert(
-                          '履歴を削除しますか？',
-                          `${item.category}（${formatMoney(item.amount)}）を削除します。`,
+                          `${item.category}を削除しますか？`,
+                          `金額: ${formatMoney(item.amount)}`,
                           [
                             { text: 'キャンセル', style: 'cancel' },
                             {
