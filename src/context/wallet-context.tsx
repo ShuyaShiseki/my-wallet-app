@@ -12,7 +12,7 @@ import {
 import { auth, signInAnonymously, walletDocRef } from '@/lib/firebase';
 
 export type AccountType = 'bank' | 'wallet';
-export type HistoryType = 'expense' | 'withdrawal';
+export type HistoryType = 'expense' | 'withdrawal' | 'deposit';
 
 export type WalletBalances = {
   bank: number;
@@ -43,8 +43,9 @@ type WalletContextValue = {
   balances: WalletBalances;
   history: WalletHistoryEntry[];
   setInitialBalances: (bank: number, wallet: number) => void;
-  addExpense: (account: AccountType, amount: number, category: string) => WalletOperationResult;
-  addWithdrawal: (amount: number) => WalletOperationResult;
+  addExpense: (account: AccountType, amount: number, category: string) => boolean;
+  addWithdrawal: (amount: number) => boolean;
+  addDeposit: (amount: number) => boolean;
   deleteHistory: (id: string) => void;
 };
 
@@ -88,9 +89,12 @@ function calculateBalances(initial: WalletBalances, history: WalletHistoryEntry[
         } else {
           next.wallet = Math.max(0, result.wallet - amount);
         }
-      } else {
+      } else if (item.type === 'withdrawal') {
         next.bank = Math.max(0, result.bank - amount);
         next.wallet = result.wallet + amount;
+      } else {
+        next.bank = result.bank + amount;
+        next.wallet = Math.max(0, result.wallet - amount);
       }
 
       return next;
@@ -258,6 +262,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
         setHistory((current) => [nextEntry, ...current]);
         return { ok: true };
+      },
+      addDeposit: (amount: number) => {
+        const cleanAmount = normalizeAmount(amount);
+
+        if (cleanAmount <= 0 || cleanAmount > balances.wallet) {
+          return false;
+        }
+
+        const nextEntry: WalletHistoryEntry = {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          type: 'deposit',
+          account: 'wallet',
+          amount: cleanAmount,
+          category: '預け入れ',
+          createdAt: new Date().toISOString(),
+        };
+
+        setHistory((current) => [nextEntry, ...current]);
+        return true;
       },
       deleteHistory: (id: string) => {
         setHistory((current) => current.filter((item) => item.id !== id));

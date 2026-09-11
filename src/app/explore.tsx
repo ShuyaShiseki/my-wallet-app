@@ -31,6 +31,9 @@ export default function HistoryScreen() {
   const totalWithdrawal = history
     .filter((item) => item.type === 'withdrawal')
     .reduce((sum, item) => sum + item.amount, 0);
+  const totalDeposit = history
+    .filter((item) => item.type === 'deposit')
+    .reduce((sum, item) => sum + item.amount, 0);
 
   const thisMonthExpense = history.reduce((sum, item) => {
     if (item.type !== 'expense') {
@@ -50,6 +53,7 @@ export default function HistoryScreen() {
   const summary = [
     { label: '支出合計', value: formatMoney(totalExpense) },
     { label: '引出合計', value: formatMoney(totalWithdrawal) },
+    { label: '預入合計', value: formatMoney(totalDeposit) },
     { label: '今月', value: formatMoney(thisMonthExpense) },
   ];
 
@@ -81,6 +85,7 @@ export default function HistoryScreen() {
           ) : (
             history.map((item) => {
               const isExpense = item.type === 'expense';
+              const isDeposit = item.type === 'deposit';
               const amountColor = isExpense ? '#dc2626' : '#f59e0b';
               const amountPrefix = isExpense ? '-' : '+';
 
@@ -94,7 +99,7 @@ export default function HistoryScreen() {
                           isExpense ? styles.typeBadgeExpense : styles.typeBadgeWithdrawal,
                         ]}>
                         <ThemedText type="smallBold" style={styles.typeBadgeText}>
-                          {isExpense ? '支出' : '引き出し'}
+                          {isExpense ? '支出' : isDeposit ? '預け入れ' : '引き出し'}
                         </ThemedText>
                       </View>
                       <ThemedText type="small" themeColor="textSecondary">
