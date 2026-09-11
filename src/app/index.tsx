@@ -74,8 +74,20 @@ export default function HomeScreen() {
 
   const handleExpenseSubmit = () => {
     const amount = Number(expenseAmount) || 0;
-    if (!addExpense(selectedAccount, amount, expenseCategory)) {
-      setStatusMessage('金額とカテゴリを入力してください');
+    const result = addExpense(selectedAccount, amount, expenseCategory);
+    if (!result.ok) {
+      if (result.reason === 'insufficient-funds') {
+        Alert.alert(
+          '残高不足',
+          `${selectedAccount === 'bank' ? '銀行' : '財布'}の残高を超える支出は登録できません。`,
+          [{ text: '確認' }],
+        );
+      }
+      setStatusMessage(
+        result.reason === 'insufficient-funds'
+          ? '残高が不足しているため登録できません'
+          : '金額とカテゴリを入力してください',
+      );
       setStatusTone('error');
       return;
     }
@@ -87,15 +99,21 @@ export default function HomeScreen() {
 
   const handleTransferSubmit = () => {
     const amount = Number(transferAmount) || 0;
-    const succeeded =
+    const result =
       transferType === 'deposit' ? addDeposit(amount) : addWithdrawal(amount);
 
-    if (!succeeded) {
+    if (!result.ok) {
       const source = transferType === 'deposit' ? '財布' : '銀行';
-      Alert.alert('残高不足', `${source}残高を超える資金移動は登録できません。`, [
-        { text: '確認' },
-      ]);
-      setStatusMessage(`${source}残高が不足しているため登録できません`);
+      if (result.reason === 'insufficient-funds') {
+        Alert.alert('残高不足', `${source}残高を超える資金移動は登録できません。`, [
+          { text: '確認' },
+        ]);
+      }
+      setStatusMessage(
+        result.reason === 'insufficient-funds'
+          ? `${source}残高が不足しているため登録できません`
+          : '資金移動額を入力してください',
+      );
       setStatusTone('error');
       return;
     }
@@ -365,6 +383,12 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '700',
   },
+  buttonPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.96 }],
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   primaryButton: {
     backgroundColor: '#111827',
     paddingVertical: Spacing.three,
@@ -386,12 +410,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
-  },
-  buttonPressed: {
-    opacity: 0.72,
-    transform: [{ scale: 0.96 }],
-    shadowOpacity: 0,
-    elevation: 0,
   },
   buttonText: {
     color: '#ffffff',

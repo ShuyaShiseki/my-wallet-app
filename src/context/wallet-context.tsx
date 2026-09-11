@@ -9,7 +9,7 @@ import {
     type ReactNode,
 } from 'react';
 
-import { walletDocRef } from '@/lib/firebase';
+import { auth, signInAnonymously, walletDocRef } from '@/lib/firebase';
 
 export type AccountType = 'bank' | 'wallet';
 export type HistoryType = 'expense' | 'withdrawal' | 'deposit';
@@ -28,6 +28,10 @@ export type WalletHistoryEntry = {
   createdAt: string;
 };
 
+export type WalletOperationResult =
+  | { ok: true }
+  | { ok: false; reason: 'invalid-input' | 'insufficient-funds' };
+
 type WalletStatePayload = {
   initialBalances?: WalletBalances;
   history?: WalletHistoryEntry[];
@@ -39,9 +43,13 @@ type WalletContextValue = {
   balances: WalletBalances;
   history: WalletHistoryEntry[];
   setInitialBalances: (bank: number, wallet: number) => void;
-  addExpense: (account: AccountType, amount: number, category: string) => boolean;
-  addWithdrawal: (amount: number) => boolean;
-  addDeposit: (amount: number) => boolean;
+  addExpense: (
+    account: AccountType,
+    amount: number,
+    category: string,
+  ) => WalletOperationResult;
+  addWithdrawal: (amount: number) => WalletOperationResult;
+  addDeposit: (amount: number) => WalletOperationResult;
   deleteHistory: (id: string) => void;
 };
 
@@ -128,6 +136,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
 
         if (walletDocRef) {
+          if (auth && !auth.currentUser) {
+            await signInAnonymously(auth);
+          }
+
           const snapshot = await getDoc(walletDocRef);
           if (snapshot.exists()) {
             const remote = snapshot.data() as WalletStatePayload;
@@ -213,7 +225,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         const cleanCategory = category.trim();
 
         if (!cleanCategory || cleanAmount <= 0) {
-          return false;
+          return { ok: false, reason: 'invalid-input' };
+        }
+
+        if (cleanAmount > balances[account]) {
+          return { ok: false, reason: 'insufficient-funds' };
         }
 
         const nextEntry: WalletHistoryEntry = {
@@ -226,13 +242,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         };
 
         setHistory((current) => [nextEntry, ...current]);
-        return true;
+        return { ok: true };
       },
       addWithdrawal: (amount: number) => {
         const cleanAmount = normalizeAmount(amount);
 
         if (cleanAmount <= 0) {
-          return false;
+          return { ok: false, reason: 'invalid-input' };
+        }
+
+        if (cleanAmount > balances.bank) {
+          return { ok: false, reason: 'insufficient-funds' };
         }
 
         const nextEntry: WalletHistoryEntry = {
@@ -245,13 +265,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         };
 
         setHistory((current) => [nextEntry, ...current]);
-        return true;
+        return { ok: true };
       },
       addDeposit: (amount: number) => {
         const cleanAmount = normalizeAmount(amount);
 
-        if (cleanAmount <= 0 || cleanAmount > balances.wallet) {
-          return false;
+        if (cleanAmount <= 0) {
+          return { ok: false, reason: 'invalid-input' };
+        }
+
+        if (cleanAmount > balances.wallet) {
+          return { ok: false, reason: 'insufficient-funds' };
         }
 
         const nextEntry: WalletHistoryEntry = {
@@ -264,7 +288,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         };
 
         setHistory((current) => [nextEntry, ...current]);
-        return true;
+        return { ok: true };
       },
       deleteHistory: (id: string) => {
         setHistory((current) => current.filter((item) => item.id !== id));

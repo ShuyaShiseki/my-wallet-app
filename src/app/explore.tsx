@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -106,7 +106,25 @@ export default function HistoryScreen() {
                         {item.account === 'bank' ? '銀行' : '財布'}
                       </ThemedText>
                     </View>
-                    <Pressable style={styles.deleteButton} onPress={() => deleteHistory(item.id)}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.deleteButton,
+                        pressed && styles.deleteButtonPressed,
+                      ]}
+                      onPress={() =>
+                        Alert.alert(
+                          '履歴を削除しますか？',
+                          `${item.category}（${formatMoney(item.amount)}）を削除します。`,
+                          [
+                            { text: 'キャンセル', style: 'cancel' },
+                            {
+                              text: '削除',
+                              style: 'destructive',
+                              onPress: () => deleteHistory(item.id),
+                            },
+                          ],
+                        )
+                      }>
                       <ThemedText type="small" style={styles.deleteText}>
                         削除
                       </ThemedText>
@@ -227,5 +245,8 @@ const styles = StyleSheet.create({
   deleteText: {
     color: '#b91c1c',
     fontWeight: '700',
+  },
+  deleteButtonPressed: {
+    opacity: 0.65,
   },
 });
