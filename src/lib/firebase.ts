@@ -1,4 +1,5 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, signInAnonymously, type Auth } from 'firebase/auth';
 import { doc, getFirestore, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -19,11 +20,13 @@ export const isFirebaseConfigured = Boolean(
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
+let auth: Auth | null = null;
 
 if (isFirebaseConfigured) {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   db = getFirestore(app);
+  auth = getAuth(app);
 }
 
-export { db };
+export { auth, db, signInAnonymously };
 export const walletDocRef = db ? doc(db, 'wallets', 'my-wallet-app') : null;

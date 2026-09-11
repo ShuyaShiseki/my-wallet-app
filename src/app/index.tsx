@@ -87,8 +87,13 @@ export default function HomeScreen() {
 
   const handleExpenseSubmit = () => {
     const amount = Number(expenseAmount) || 0;
-    if (!addExpense(selectedAccount, amount, expenseCategory)) {
-      setStatusMessage('金額とカテゴリを入力してください');
+    const result = addExpense(selectedAccount, amount, expenseCategory);
+    if (!result.ok) {
+      setStatusMessage(
+        result.reason === 'insufficient-funds'
+          ? '残高が不足しているため登録できません'
+          : '金額とカテゴリを入力してください',
+      );
       setStatusTone('error');
       return;
     }
@@ -100,8 +105,13 @@ export default function HomeScreen() {
 
   const handleWithdrawalSubmit = () => {
     const amount = Number(withdrawalAmount) || 0;
-    if (!addWithdrawal(amount)) {
-      setStatusMessage('引き出し額を入力してください');
+    const result = addWithdrawal(amount);
+    if (!result.ok) {
+      setStatusMessage(
+        result.reason === 'insufficient-funds'
+          ? '銀行残高が不足しているため引き出せません'
+          : '引き出し額を入力してください',
+      );
       setStatusTone('error');
       return;
     }
@@ -190,7 +200,9 @@ export default function HomeScreen() {
                 />
               </View>
             </View>
-            <Pressable style={styles.primaryButton} onPress={handleInitialSave}>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+              onPress={handleInitialSave}>
               <ThemedText type="default" style={styles.buttonText}>
                 初期残高を設定
               </ThemedText>
@@ -206,9 +218,10 @@ export default function HomeScreen() {
                 <Pressable
                   key={account}
                   onPress={() => setSelectedAccount(account)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.accountButton,
                     selectedAccount === account && styles.accountButtonSelected,
+                    pressed && styles.buttonPressed,
                   ]}>
                   <ThemedText style={styles.accountButtonText}>
                     {account === 'bank' ? '銀行' : '財布'}
@@ -241,7 +254,9 @@ export default function HomeScreen() {
                 />
               </View>
             </View>
-            <Pressable style={styles.primaryButton} onPress={handleExpenseSubmit}>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+              onPress={handleExpenseSubmit}>
               <ThemedText type="default" style={styles.buttonText}>
                 支出を登録
               </ThemedText>
@@ -266,7 +281,9 @@ export default function HomeScreen() {
                 />
               </View>
             </View>
-            <Pressable style={styles.secondaryButton} onPress={handleWithdrawalSubmit}>
+            <Pressable
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+              onPress={handleWithdrawalSubmit}>
               <ThemedText type="default" style={styles.buttonText}>
                 銀行から現金へ移動
               </ThemedText>
@@ -399,6 +416,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: 'center',
+  },
+  buttonPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.98 }],
   },
   buttonText: {
     color: '#ffffff',
