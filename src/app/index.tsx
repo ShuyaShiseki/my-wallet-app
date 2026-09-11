@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+    Alert,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -89,6 +90,13 @@ export default function HomeScreen() {
     const amount = Number(expenseAmount) || 0;
     const result = addExpense(selectedAccount, amount, expenseCategory);
     if (!result.ok) {
+      if (result.reason === 'insufficient-funds') {
+        Alert.alert(
+          '残高不足',
+          `${selectedAccount === 'bank' ? '銀行' : '財布'}の残高を超える支出は登録できません。`,
+          [{ text: '確認' }],
+        );
+      }
       setStatusMessage(
         result.reason === 'insufficient-funds'
           ? '残高が不足しているため登録できません'
@@ -107,6 +115,11 @@ export default function HomeScreen() {
     const amount = Number(withdrawalAmount) || 0;
     const result = addWithdrawal(amount);
     if (!result.ok) {
+      if (result.reason === 'insufficient-funds') {
+        Alert.alert('残高不足', '銀行残高を超える引き出しは登録できません。', [
+          { text: '確認' },
+        ]);
+      }
       setStatusMessage(
         result.reason === 'insufficient-funds'
           ? '銀行残高が不足しているため引き出せません'
@@ -405,21 +418,33 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '700',
   },
+  buttonPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.96 }],
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   primaryButton: {
     backgroundColor: '#111827',
     paddingVertical: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   secondaryButton: {
     backgroundColor: '#f59e0b',
     paddingVertical: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: 'center',
-  },
-  buttonPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.98 }],
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonText: {
     color: '#ffffff',
