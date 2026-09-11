@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+    Alert,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -26,8 +27,8 @@ export default function HomeScreen() {
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseCategory, setExpenseCategory] = useState('');
   const [selectedAccount, setSelectedAccount] = useState<AccountType>('bank');
-  const [withdrawalAmount, setWithdrawalAmount] = useState('');
-  const [depositAmount, setDepositAmount] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferType, setTransferType] = useState<'deposit' | 'withdrawal'>('deposit');
   const [statusMessage, setStatusMessage] = useState('');
   const [statusTone, setStatusTone] = useState<'success' | 'error'>('success');
 
@@ -84,27 +85,24 @@ export default function HomeScreen() {
     setStatusTone('success');
   };
 
-  const handleDepositSubmit = () => {
-    const amount = Number(depositAmount) || 0;
-    if (!addDeposit(amount)) {
-      setStatusMessage('預け入れ額が財布残高を超えています');
-      setStatusTone('error');
-      return;
-    }
-    setDepositAmount('');
-    setStatusMessage('財布から銀行へ預け入れました');
-    setStatusTone('success');
-  };
+  const handleTransferSubmit = () => {
+    const amount = Number(transferAmount) || 0;
+    const succeeded =
+      transferType === 'deposit' ? addDeposit(amount) : addWithdrawal(amount);
 
-  const handleWithdrawalSubmit = () => {
-    const amount = Number(withdrawalAmount) || 0;
-    if (!addWithdrawal(amount)) {
-      setStatusMessage('引き出し額を入力してください');
+    if (!succeeded) {
+      const source = transferType === 'deposit' ? '財布' : '銀行';
+      Alert.alert('残高不足', `${source}残高を超える資金移動は登録できません。`, [
+        { text: '確認' },
+      ]);
+      setStatusMessage(`${source}残高が不足しているため登録できません`);
       setStatusTone('error');
       return;
     }
-    setWithdrawalAmount('');
-    setStatusMessage('銀行から現金へ移動しました');
+    setTransferAmount('');
+    setStatusMessage(
+      transferType === 'deposit' ? '財布から銀行へ預け入れました' : '銀行から財布へ引き出しました',
+    );
     setStatusTone('success');
   };
 
@@ -146,27 +144,6 @@ export default function HomeScreen() {
             </View>
           </ThemedView>
 
-          <ThemedView type="backgroundElement" style={styles.formCard}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              預け入れ
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              財布から銀行へ資金を移動します。
-            </ThemedText>
-            <TextInput
-              value={depositAmount}
-              onChangeText={setDepositAmount}
-              keyboardType="number-pad"
-              placeholder="例: 10000"
-              style={styles.input}
-            />
-            <Pressable style={styles.secondaryButton} onPress={handleDepositSubmit}>
-              <ThemedText type="default" style={styles.buttonText}>
-                財布から銀行へ預け入れ
-              </ThemedText>
-            </Pressable>
-          </ThemedView>
-
           {statusMessage ? (
             <View
               style={[
@@ -188,9 +165,10 @@ export default function HomeScreen() {
                 <Pressable
                   key={account}
                   onPress={() => setSelectedAccount(account)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.accountButton,
                     selectedAccount === account && styles.accountButtonSelected,
+                    pressed && styles.buttonPressed,
                   ]}>
                   <ThemedText style={styles.accountButtonText}>
                     {account === 'bank' ? '銀行' : '財布'}
@@ -223,7 +201,9 @@ export default function HomeScreen() {
                 />
               </View>
             </View>
-            <Pressable style={styles.primaryButton} onPress={handleExpenseSubmit}>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
+              onPress={handleExpenseSubmit}>
               <ThemedText type="default" style={styles.buttonText}>
                 支出を登録
               </ThemedText>
@@ -232,28 +212,43 @@ export default function HomeScreen() {
 
           <ThemedView type="backgroundElement" style={styles.formCard}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
-              資金移動（引き出し）
+              資金移動
             </ThemedText>
-            <View style={styles.inlineInputs}>
-              <View style={styles.inputGroup}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  引き出し額
-                </ThemedText>
-                <TextInput
-                  value={withdrawalAmount}
-                  onChangeText={setWithdrawalAmount}
-                  keyboardType="number-pad"
-                  placeholder="例: 30000"
-                  style={styles.input}
-                />
-              </View>
+            <ThemedText type="small" themeColor="textSecondary">
+              預け入れまたは引き出しを選択します。
+            </ThemedText>
+            <View style={styles.accountRow}>
+              {(['deposit', 'withdrawal'] as const).map((type) => (
+                <Pressable
+                  key={type}
+                  onPress={() => setTransferType(type)}
+                  style={({ pressed }) => [
+                    styles.accountButton,
+                    transferType === type && styles.accountButtonSelected,
+                    pressed && styles.buttonPressed,
+                  ]}>
+                  <ThemedText style={styles.accountButtonText}>
+                    {type === 'deposit' ? '預け入れ' : '引き出し'}
+                  </ThemedText>
+                </Pressable>
+              ))}
             </View>
-            <Pressable style={styles.secondaryButton} onPress={handleWithdrawalSubmit}>
+            <TextInput
+              value={transferAmount}
+              onChangeText={setTransferAmount}
+              keyboardType="number-pad"
+              placeholder={transferType === 'deposit' ? '預け入れ額' : '引き出し額'}
+              style={styles.input}
+            />
+            <Pressable
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+              onPress={handleTransferSubmit}>
               <ThemedText type="default" style={styles.buttonText}>
-                銀行から現金へ移動
+                {transferType === 'deposit' ? '財布から銀行へ預け入れ' : '銀行から財布へ引き出し'}
               </ThemedText>
             </Pressable>
           </ThemedView>
+
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -375,12 +370,28 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   secondaryButton: {
     backgroundColor: '#f59e0b',
     paddingVertical: Spacing.three,
     borderRadius: Spacing.two,
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  buttonPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.96 }],
+    shadowOpacity: 0,
+    elevation: 0,
   },
   buttonText: {
     color: '#ffffff',
